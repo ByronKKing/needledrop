@@ -1,6 +1,8 @@
 from apiclient.discovery import build
 import pandas as pd
 
+###data up to Fader Stinkpiece video
+
 ##initialize api call
 
 api_key = APIKEY
@@ -69,19 +71,49 @@ for vid in vidList:
 ##retrieve relevant fields for each video and store in dataframe
 
 dictList = []
-
-for vid in vidList:
-    currentDict = {}
-    xx = vid['snippet']
-    try:
-        currentDict['thumbnail'] = xx['thumbnails']['standard']['url']
-    except:
-        currentDict['thumbnail'] = "none"
-    currentDict['published_at'] = xx['publishedAt']
-    currentDict['description'] = xx['description']
-    currentDict['title'] = xx['title']
-    currentDict['video_id'] = xx['resourceId']['videoId']
-    dictList.append(currentDict)
+for vid in vids:
+    rows = vid['items']
+    for row in rows:
+        currentDict = {}
+        #get vid id
+        currentDict['id'] = row['id']
+        #snippet
+        xx = row['snippet']
+        currentDict['description'] = xx['description']
+        currentDict['live_broadcast'] = xx['liveBroadcastContent']
+        currentDict['published_at'] = xx['publishedAt']
+        currentDict['tags'] = xx['tags']
+        try:
+            currentDict['thumbnail'] = xx['thumbnails']['standard']['url']
+        except:
+            currentDict['thumbnail'] = "none"
+        currentDict['title'] = xx['title']
+        #contentDetails
+        xx = row['contentDetails']
+        currentDict['duration'] = xx['duration']
+        currentDict['definition'] = xx['definition']
+        #recordingDetails
+        try:
+            xx = row['recordingDetails']['location']
+            currentDict['altitude'] = xx['altitude']
+            currentDict['latitude'] = xx['latitude']
+            currentDict['longitude'] = xx['longitude']
+        except:
+            currentDict['altitude'] = None
+            currentDict['latitude'] = None
+            currentDict['longitude'] = None
+        #statistics
+        xx = row['statistics']
+        currentDict['comments'] = xx['commentCount']
+        currentDict['dislikes'] = xx.get('dislikeCount')
+        currentDict['favorites'] = xx['favoriteCount']
+        currentDict['likes'] = xx.get('likeCount')
+        currentDict['views'] = xx.get('viewCount')
+        dictList.append(currentDict)
 
 df = pd.DataFrame(dictList)
-df.head()
+df.to_csv("~/needledrop/raw-data.csv",index=False)
+
+
+
+
