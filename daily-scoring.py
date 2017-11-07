@@ -1,6 +1,10 @@
 
 from apiclient.discovery import build
 import pandas as pd
+import smtplib
+from sklearn.externals import joblib
+import sys
+from email.mime.multipart import MIMEMultipart
 
 ###call api for last 50 vids
 
@@ -15,7 +19,7 @@ channels_response = youtube.channels().list(
 playlistId = channels_response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
 
 vidList = youtube.playlistItems().list(
-playlistId=uploadId,
+playlistId=playlistId,
 part="snippet",
 maxResults=50
 ).execute()
@@ -80,24 +84,24 @@ for vid in vids:
         currentDict['views'] = xx.get('viewCount')
         dictList.append(currentDict)
 
+
 ###get rid of existing videos in dataset
+
 df = pd.DataFrame(dictList)
 existing = pd.read_csv("~/needledrop/raw-data.csv")
 
 df = df[~df.countries.isin(existing.id.unique())]
 
 if df is not None:
-	#add to existing dataset
 	existing = existing.append(df)
-	temp.to_csv("~/Desktop/temp.csv",index=False)
-	break
+	existing.to_csv("~/needledrop/raw-data.csv",index=False)
 else:
 	print("Send email")
+    sys.exit()
 
 
 ###processing
 
-#get rating
 df['rating'] = None
 df['rating'][df['description'].str.contains('1/10', case=False, na=False)] = 1
 df['rating'][df['description'].str.contains('2/10', case=False, na=False)] = 2
@@ -112,7 +116,6 @@ df['rating'][df['description'].str.contains('10/10', case=False, na=False)] = 10
 
 df['rating'] = pd.to_numeric(df['rating'])
 
-#get album
 def test_title(x):
     xx = x.split(' - ')
     if len(xx) > 1:
@@ -132,10 +135,8 @@ df['album'] = df.album.str.replace("COMPILATION","")
 df['album'] = df.album.str.replace("TRACK","")
 df[df['album'].isnull()].head()
 
-#get artist
 df['artist'] = df['title'].apply(lambda x: x.split(' - ')[0])
 
-#get genre
 df['electronic'] = 0
 df['electronic'][df['tags'].str.contains('electronic', case=False, na=False)] = 1
 df['hip_hop'] = 0
@@ -159,7 +160,6 @@ df['rap'][df['tags'].str.contains('rap', case=False, na=False)] = 1
 df['jazz'] = 0
 df['jazz'][df['tags'].str.contains('jazz', case=False, na=False)] = 1
 
-#get dates
 df['published_at'] = pd.to_datetime(df['published_at'])
 
 df['year'] = df.published_at.dt.year
@@ -167,15 +167,14 @@ df['month'] = df.published_at.dt.month
 df['dow'] = df.published_at.dt.dayofweek
 df['week'] = df.published_at.dt.week
 
-#create categories
 df[['year', 'month', 'dow','week']] = df[['year', 'month', 'dow','week']].apply(lambda x: x.astype('category'))
 df[['electronic', 'hip_hop', 'metal','folk',
    'indie','underground','experimental',
    'instrumental','rock','rap','jazz']] = df[['electronic', 'hip_hop', 'metal','folk',
    'indie','underground','experimental',
    'instrumental','rock','rap','jazz']].apply(lambda x: x.astype('category'))
-data['rating_bucket'] = data['rating'].astype('str')
-data['rating_bucket'][data.rating.isin([1,2,3])] = "1-3"
+df['rating_bucket'] = df['rating'].astype('str')
+df['rating_bucket'][df.rating.isin([1,2,3])] = "1-3"
 
 
 ###make prediction
@@ -184,30 +183,49 @@ data = df[df.rating.notnull()&df.album.notnull()&df.artist.notnull()]
 
 if data is None:
 	print("Send email")
+    sys.exit()
 
-#load model and predict
-multModel = joblib.load(filename)
+multModel = joblib.load("multreg-weights.sav")
 data['pred'] = multModel.predict(data[['comments','likes','dislikes','favorites','views',
                    'electronic','hip_hop','metal','folk','indie','underground',
                    'experimental','instrumental','rock','rap','jazz',
                    'month','year','month','dow','week']])
 
+scores = data[['id','title','artist','album','rating_bucket','pred']]
+
 existingscores = pd.read_csv("~/needledrop/scores.csv")
 
-scores = scores[~scores.countries.isin(existingscores.id.unique())]
+scores = scores[~scores.id.isin(existingscores.id.unique())]
 
 if scores is not None:
-	#add to existing dataset
-	existing = existing.append(scores)
-	temp.to_csv("~/needledrop/scores.csv",index=False)
-	break
+	existingscores = existingscores.append(scores)
+	existingscores.to_csv("~/needledrop/scores.csv",index=False)
+    print("Send email with latest scores")
 else:
-	print("Send email")
-
-data[['title','artist','album','rating_bucket','pred']].to_csv("~/Desktop/temp.csv",index=False)
+	print("Send email saying wasn't scored")
 
 
-print("Send Email with score")
+######email
+msg = MIMEMultipart()
+msg['From']="aspidistraflyer@yahoo.com"
+msg['To']="byronkking@gmail.com"
+msg['Subject']="What up mayn?"
+
+s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
+s.starttls()
+s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
+s.quit()
+
+
+# send the message via the server set up earlier.
+msg = "From: {}\r\nTo: {}\r\n\r\n{}\r\n".format("aspidistraflyer@yahoo.com", "byronkking@gmail.com","hello")
+s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
+s.starttls()
+s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
+s.sendmail("byronkking@gmail.com","aspidistraflyer@yahoo.com",msg)
+
+
+
 
 
 
