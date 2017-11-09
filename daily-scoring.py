@@ -5,6 +5,23 @@ import smtplib
 from sklearn.externals import joblib
 import sys
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+def sendEmail(subject,body):
+    msg = MIMEMultipart()
+    msg['From']="aspidistraflyer@yahoo.com"
+    msg['To']="byronkking@gmail.com"
+    msg['Subject']=subject
+    body = bodya
+    body = MIMEText(body)
+    msg.attach(body)
+
+    s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
+    s.starttls()
+    s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
+    s.sendmail("byronkking@gmail.com","aspidistraflyer@yahoo.com",msg)
+    s.quit()
+
 
 ###call api for last 50 vids
 
@@ -96,7 +113,7 @@ if df is not None:
 	existing = existing.append(df)
 	existing.to_csv("~/needledrop/raw-data.csv",index=False)
 else:
-	print("Send email")
+	sendEmail("ND Update: No New Vids","There were no new videos to add to the dataset.")
     sys.exit()
 
 
@@ -182,7 +199,7 @@ df['rating_bucket'][df.rating.isin([1,2,3])] = "1-3"
 data = df[df.rating.notnull()&df.album.notnull()&df.artist.notnull()]
 
 if data is None:
-	print("Send email")
+	sendEmail("ND Update: No New Predictions","There were no new predictions to add to the dataset.")
     sys.exit()
 
 multModel = joblib.load("multreg-weights.sav")
@@ -200,34 +217,8 @@ scores = scores[~scores.id.isin(existingscores.id.unique())]
 if scores is not None:
 	existingscores = existingscores.append(scores)
 	existingscores.to_csv("~/needledrop/scores.csv",index=False)
-    print("Send email with latest scores")
+    sendEmail("ND Update: New Scores","New scores were updated and saved.")
 else:
-	print("Send email saying wasn't scored")
-
-
-######email
-msg = MIMEMultipart()
-msg['From']="aspidistraflyer@yahoo.com"
-msg['To']="byronkking@gmail.com"
-msg['Subject']="What up mayn?"
-
-s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
-s.starttls()
-s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
-s.quit()
-
-
-# send the message via the server set up earlier.
-msg = "From: {}\r\nTo: {}\r\n\r\n{}\r\n".format("aspidistraflyer@yahoo.com", "byronkking@gmail.com","hello")
-s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
-s.starttls()
-s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
-s.sendmail("byronkking@gmail.com","aspidistraflyer@yahoo.com",msg)
-
-
-
-
-
-
+	sendEmail("ND Update: No New Scores","The script did not save any new scores.")
 
 
