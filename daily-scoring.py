@@ -1,9 +1,9 @@
 
 from apiclient.discovery import build
 import pandas as pd
-import smtplib
 from sklearn.externals import joblib
 import sys
+import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -12,18 +12,17 @@ def sendEmail(subject,body):
     msg['From']="aspidistraflyer@yahoo.com"
     msg['To']="byronkking@gmail.com"
     msg['Subject']=subject
-    body = bodya
     body = MIMEText(body)
     msg.attach(body)
 
     s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
     s.starttls()
     s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
-    s.sendmail("byronkking@gmail.com","aspidistraflyer@yahoo.com",msg)
+    s.sendmail("aspidistraflyer@yahoo.com","byronkking@gmail.com",msg.as_string())
     s.quit()
 
 
-###call api for last 50 vids
+#call api for last 50 vids
 
 api_key = APIKEY
 youtube = build('youtube', 'v3', developerKey=api_key)
@@ -102,22 +101,22 @@ for vid in vids:
         dictList.append(currentDict)
 
 
-###get rid of existing videos in dataset
+#get rid of existing videos in dataset
 
 df = pd.DataFrame(dictList)
 existing = pd.read_csv("~/needledrop/raw-data.csv")
 
-df = df[~df.countries.isin(existing.id.unique())]
+df = df[~df.id.isin(existing.id.unique())]
 
-if df is not None:
+if len(df) != 0:
 	existing = existing.append(df)
 	existing.to_csv("~/needledrop/raw-data.csv",index=False)
 else:
-	sendEmail("ND Update: No New Vids","There were no new videos to add to the dataset.")
+    sendEmail("ND Update: No New Vids","There were no new videos to add to the dataset.")
     sys.exit()
 
 
-###processing
+#processing
 
 df['rating'] = None
 df['rating'][df['description'].str.contains('1/10', case=False, na=False)] = 1
@@ -194,11 +193,11 @@ df['rating_bucket'] = df['rating'].astype('str')
 df['rating_bucket'][df.rating.isin([1,2,3])] = "1-3"
 
 
-###make prediction
+#make prediction
 
 data = df[df.rating.notnull()&df.album.notnull()&df.artist.notnull()]
 
-if data is None:
+if len(data) != 0 :
 	sendEmail("ND Update: No New Predictions","There were no new predictions to add to the dataset.")
     sys.exit()
 
@@ -214,11 +213,11 @@ existingscores = pd.read_csv("~/needledrop/scores.csv")
 
 scores = scores[~scores.id.isin(existingscores.id.unique())]
 
-if scores is not None:
+if len(scores) != 0:
 	existingscores = existingscores.append(scores)
-	existingscores.to_csv("~/needledrop/scores.csv",index=False)
+    existingscores.to_csv("~/needledrop/scores.csv",index=False)
     sendEmail("ND Update: New Scores","New scores were updated and saved.")
 else:
-	sendEmail("ND Update: No New Scores","The script did not save any new scores.")
+    sendEmail("ND Update: No New Scores","The script did not save any new scores.")
 
 
