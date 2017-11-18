@@ -24,7 +24,7 @@ def sendEmail(subject,body):
 
 #call api for last 50 vids
 
-api_key = APIKEY
+api_key = "AIzaSyBJDC-qDsI7OAE52U-j-tfEqgFFNMZELBE"
 youtube = build('youtube', 'v3', developerKey=api_key)
 
 channels_response = youtube.channels().list(
@@ -197,8 +197,8 @@ df['rating_bucket'][df.rating.isin([1,2,3])] = "1-3"
 
 data = df[df.rating.notnull()&df.album.notnull()&df.artist.notnull()]
 
-if len(data) != 0 :
-	sendEmail("ND Update: No New Predictions","There were no new predictions to add to the dataset.")
+if len(data) == 0 :
+    sendEmail("ND Update: No New Predictions","There were no new predictions to add to the dataset.")
     sys.exit()
 
 multModel = joblib.load("multreg-weights.sav")
@@ -214,7 +214,7 @@ existingscores = pd.read_csv("~/needledrop/scores.csv")
 scores = scores[~scores.id.isin(existingscores.id.unique())]
 
 if len(scores) != 0:
-	existingscores = existingscores.append(scores)
+    existingscores = existingscores.append(scores)
     existingscores.to_csv("~/needledrop/scores.csv",index=False)
     sendEmail("ND Update: New Scores","New scores were updated and saved.")
 else:
