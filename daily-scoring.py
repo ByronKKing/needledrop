@@ -24,7 +24,7 @@ def sendEmail(subject,body):
 
 #call api for last 50 vids
 
-api_key = "AIzaSyBJDC-qDsI7OAE52U-j-tfEqgFFNMZELBE"
+api_key = APIKEY
 youtube = build('youtube', 'v3', developerKey=api_key)
 
 channels_response = youtube.channels().list(
