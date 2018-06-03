@@ -7,19 +7,29 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+haslo = []
+with open("/Users/byronking/Desktop/hasla/haslo.txt") as file:
+    for l in file:
+        haslo.append(l.strip())
+
+haslo = haslo[0]
+
+recipients = "byronkking@gmail.com"
+
 def sendEmail(subject,body):
     msg = MIMEMultipart()
     msg['From']="aspidistraflyer@yahoo.com"
-    msg['To']="byronkking@gmail.com"
+    msg['To']=recipients
     msg['Subject']=subject
     body = MIMEText(body)
     msg.attach(body)
 
     s = smtplib.SMTP(host="smtp.mail.yahoo.com", port=587)
     s.starttls()
-    s.login("aspidistraflyer@yahoo.com", "tojestmojhaslo")
-    s.sendmail("aspidistraflyer@yahoo.com","byronkking@gmail.com",msg.as_string())
+    s.login("aspidistraflyer@yahoo.com", haslo)
+    s.sendmail("aspidistraflyer@yahoo.com",recipients.split(","),msg.as_string())
     s.quit()
+    print("Email sent successfully.")
 
 
 #call api for last 50 vids
